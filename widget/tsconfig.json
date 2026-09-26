@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "module": "none",
+    "lib": ["DOM", "ES2017"],
+    "strict": true,
+    "outDir": "../public",
+    "rootDir": "src",
+    "removeComments": true,
+    "skipLibCheck": true,
+    "noEmitOnError": true
+  },
+  "include": ["src/widget.ts"]
+}

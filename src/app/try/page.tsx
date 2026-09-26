@@ -1,5 +1,6 @@
 "use client";
 
+import Script from "next/script";
 import { useState, type FormEvent } from "react";
 
 type ChatResponse = {
@@ -97,6 +98,7 @@ export default function TryPage() {
       {raw ? (
         <pre className="overflow-auto rounded bg-black/5 p-4 text-sm">{raw}</pre>
       ) : null}
+      <Script src="/widget.js" data-title="星河大学智能助手" strategy="afterInteractive" />
     </main>
   );
 }
