@@ -7,7 +7,7 @@
     "build": "node ./node_modules/next/dist/bin/next build",
     "start": "node ./node_modules/next/dist/bin/next start",
     "lint": "node ./node_modules/eslint/bin/eslint.js",
-    "test": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test ./src/lib/faq.test.ts"
+    "test": "node --experimental-strip-types --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test ./src/lib/faq.test.ts ./src/lib/answer/keyword.test.ts"
   },
   "dependencies": {
     "next": "16.3.6",
