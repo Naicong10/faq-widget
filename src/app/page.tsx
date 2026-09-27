@@ -1,5 +1,3 @@
-import Script from "next/script";
-
 const notices = [
   { label: "报到", value: "9 月 1 日–2 日 · 南门迎新点" },
   { label: "宿舍", value: "本科生 4 人间 · 23:30 熄灯" },
@@ -55,7 +53,7 @@ export default function Home() {
           <p>zhaosheng@xinghe.edu.cn</p>
         </div>
       </footer>
-      <Script src="/widget.js" data-title="星河大学智能助手" strategy="afterInteractive" />
+      <script src="/widget.js" data-title="星河大学智能助手" defer />
     </div>
   );
 }

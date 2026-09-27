@@ -8,6 +8,7 @@
     const script = document.currentScript;
     const title = ((_a = script === null || script === void 0 ? void 0 : script.dataset.title) === null || _a === void 0 ? void 0 : _a.trim()) || "星河大学智能助手";
     const apiUrl = resolveApi(script);
+    const leadsUrl = apiUrl.replace(/\/chat\/?$/, "/leads");
     const host = document.createElement("div");
     for (const [property, value] of [
         ["all", "initial"],
@@ -111,13 +112,37 @@
         font-size: 13px;
         cursor: pointer;
       }
-      form {
+      form.ask {
         display: flex;
         gap: 8px;
         padding: 12px;
         background: #fff;
         border-top: 1px solid #e6e8ee;
       }
+      .lead {
+        align-self: stretch;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 10px;
+        background: #fff;
+        border-radius: 12px;
+      }
+      .lead .hint { margin: 0; font-size: 13px; }
+      .lead .field { display: flex; flex-direction: column; gap: 4px; font-size: 13px; }
+      .lead input, .lead textarea { width: 100%; flex: none; }
+      .lead textarea {
+        min-height: 72px;
+        border: 1px solid #d0d7e2;
+        border-radius: 10px;
+        padding: 8px 10px;
+        font: inherit;
+        font-size: 16px;
+        color: #1a1a1a;
+        background: #fff;
+        resize: vertical;
+      }
+      .lead .error { margin: 0; color: #9b2c2c; font-size: 13px; }
       input {
         flex: 1;
         min-width: 0;
@@ -163,7 +188,7 @@
           <button class="close" type="button" aria-label="关闭">×</button>
         </div>
         <div class="log"></div>
-        <form>
+        <form class="ask">
           <input maxlength="200" placeholder="输入问题" aria-label="问题" />
           <button class="send" type="submit">发送</button>
         </form>
@@ -259,6 +284,8 @@
             if (data.suggestions && data.suggestions.length > 0) {
                 appendSuggestions(data.suggestions);
             }
+            if (data.handoff)
+                appendLeadForm(trimmed, data.answer);
         }
         catch (_a) {
             pending.textContent = "网络请求失败，请稍后再试。";
@@ -268,6 +295,89 @@
             input.disabled = false;
             sendButton.disabled = false;
         }
+    }
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    function appendLeadForm(question, botAnswer) {
+        const box = document.createElement("form");
+        box.className = "lead";
+        const hint = document.createElement("p");
+        hint.className = "hint";
+        hint.textContent = "留下邮箱，招生办会通过邮件回复你。";
+        const emailField = labeledField("邮箱");
+        const emailInput = emailField.querySelector("input");
+        emailInput.type = "email";
+        emailInput.required = true;
+        emailInput.maxLength = 254;
+        emailInput.autocomplete = "email";
+        const questionField = document.createElement("label");
+        questionField.className = "field";
+        const questionLabel = document.createElement("span");
+        questionLabel.textContent = "问题";
+        const questionInput = document.createElement("textarea");
+        questionInput.required = true;
+        questionInput.maxLength = 200;
+        questionInput.value = question;
+        questionField.append(questionLabel, questionInput);
+        const error = document.createElement("p");
+        error.className = "error";
+        error.hidden = true;
+        const submit = document.createElement("button");
+        submit.type = "submit";
+        submit.className = "send";
+        submit.textContent = "提交留言";
+        box.append(hint, emailField, questionField, error, submit);
+        box.addEventListener("submit", (event) => {
+            event.preventDefault();
+            void sendLead(box, emailInput, questionInput, error, submit, botAnswer);
+        });
+        log.appendChild(box);
+        scrollLog();
+    }
+    async function sendLead(box, emailInput, questionInput, error, submit, botAnswer) {
+        const email = emailInput.value.trim();
+        const question = questionInput.value.trim();
+        error.hidden = true;
+        if (!emailPattern.test(email)) {
+            error.hidden = false;
+            error.textContent = "邮箱格式不正确";
+            return;
+        }
+        if (!question) {
+            error.hidden = false;
+            error.textContent = "问题不能为空";
+            return;
+        }
+        submit.disabled = true;
+        try {
+            const response = await fetch(leadsUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, question, botAnswer }),
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                error.hidden = false;
+                error.textContent = readError(data);
+                submit.disabled = false;
+                return;
+            }
+            const done = messageNode("bot", "已收到。招生办会通过邮件回复你。");
+            box.replaceWith(done);
+            scrollLog();
+        }
+        catch (_a) {
+            error.hidden = false;
+            error.textContent = "网络请求失败，请稍后再试。";
+            submit.disabled = false;
+        }
+    }
+    function labeledField(label) {
+        const wrap = document.createElement("label");
+        wrap.className = "field";
+        const span = document.createElement("span");
+        span.textContent = label;
+        wrap.append(span, document.createElement("input"));
+        return wrap;
     }
     function mount() {
         document.body.appendChild(host);
