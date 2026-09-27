@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isAdmin } from "@/lib/adminAuth";
 import { createJsonLeadStore } from "@/lib/store/json";
 
 const MAX_EMAIL_LENGTH = 254;
@@ -54,6 +55,13 @@ export async function POST(request: Request) {
 
   const lead = await store.add({ email, question, ...(botAnswer ? { botAnswer } : {}) });
   return json(lead, 201);
+}
+
+export async function GET(request: Request) {
+  if (!isAdmin(request)) {
+    return NextResponse.json({ error: "未登录" }, { status: 401 });
+  }
+  return NextResponse.json(await store.list());
 }
 
 function readText(value: unknown, field: string, maxLength: number): string | NextResponse {
