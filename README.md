@@ -1,16 +1,31 @@
-# 星河大学 FAQ 智能客服
+# 星河大学 FAQ 智能客服小部件
 
-演示站：https://faq-widget-naicongh-2112.vercel.app
+A one-line `<script>` FAQ chat widget for any website. It answers only from your FAQ file and, when it cannot, collects an email for human follow-up. Keyword matching is free; an optional RAG mode uses embeddings plus a language model.
 
-这是一个可以嵌进任意网页的聊天小部件。它只根据项目里的 `data/faq.md` 回答新生和家长的问题。资料里没有的问题不会编造，而是请访客留下邮箱，管理员在 `/admin` 查看。第一版不发邮件。
+这是一个可嵌入任意网页的 FAQ 聊天小部件：访客在右下角提问，系统只根据项目里的 FAQ 回答；资料里没有的问题不会编造，而是请访客留下邮箱转人工。演示场景是虚构学校「星河大学」，名称、内容和页面都不是真实学校。
 
-学校名称和内容都是虚构的。
+**线上演示：** https://faq-widget-silk.vercel.app
 
-![演示首页，右下角是聊天气泡](doc/screenshots/home.png)
+## 一行嵌入
+
+把下面这一行放到任意 HTML 页面即可出现右下角聊天气泡（接口地址会从脚本 `src` 推断）：
+
+```html
+<script src="https://faq-widget-silk.vercel.app/widget.js" defer></script>
+```
+
+也可加上 `data-title="星河大学智能助手"`；需要时用 `data-api` 覆盖接口地址。
+
+## 功能
+
+- **关键词版（零成本）**：不调用模型。用汉字二元组相似度匹配 FAQ，命中则返回答案和相关问题建议；对不上就转人工。
+- **AI 版（RAG）**：用阿里云百炼把问题变成向量，在 FAQ 向量里取最相近的几条，再交给 DeepSeek 按资料作答。用环境变量 `ANSWER_MODE` 与关键词版切换。
+- **转人工**：答不上来时弹出表单（邮箱必填 + 问题可改），提交后提示招生办会邮件回复。第一版不真正发邮件。
+- **后台**：访问 `/admin`，输入管理员密码后查看留言（时间、邮箱、问题、机器人原先的回答）。
 
 ## 架构
 
-访客网页只加载 `public/widget.js`。小部件用 Shadow DOM 画聊天窗，样式和宿主页面互不影响。提问发给 Next.js 的 `POST /api/chat`。
+访客网页只加载 `widget.js`。小部件用 Shadow DOM 画聊天窗，样式和宿主页面互不影响。提问走 `POST /api/chat`；留言走 `POST /api/leads`，管理员在 `/admin` 查看。
 
 ```mermaid
 flowchart LR
@@ -26,27 +41,20 @@ flowchart LR
   store --> admin["/admin"]
 ```
 
-两种回答方式用环境变量切换，业务代码不直接绑死某一种：
-
 | 开关 | 取值 | 不写时 |
 |---|---|---|
 | `ANSWER_MODE` | `keyword` 或 `rag` | `keyword`，不调用付费接口 |
 | `STORE` | `json` 或 `supabase` | `json`，留言写在本地文件 |
 
-- **关键词版**：把问题和每条 FAQ 拆成汉字二元组，用 Dice 相似度比较。超过 0.3 返回答案，0.18 以上当作相关建议，最多 3 条。
-- **AI 版**：用阿里云百炼 `text-embedding-v4` 把问题变成 1024 维向量，和预先算好的 `data/faq-embeddings.json` 算余弦相似度，取得分最高的 3 条。最高分不低于 0.55 才把这 3 条发给 `deepseek-flash`。调用用的是 `fetch`，没有安装 `openai` 包。
+FAQ 以 `data/faq.md` 文件维护，不提供后台上传。本地留言是 `data/leads.json`（不提交 git）；线上用 Supabase 的 `leads` 表。
 
-留言通过 `LeadStore` 保存。本地是 `data/leads.json`（不提交 git）。线上是 Supabase 的 `leads` 表，用 REST 访问，没有安装 Supabase 客户端。
+## 防编造（AI 版）
 
-## 防编造
+1. **相似度阈值 0.55**：问题向量与 FAQ 的最高分低于 0.55 时，不调用大模型，直接转人工。
+2. **`[NO_ANSWER]`**：过线后只把最相关的 3 条 FAQ 发给模型。提示词要求只能依据这些资料回答；资料里没有的电话、日期、金额等只能输出 `[NO_ANSWER]`，接口收到后转人工。
+3. **低 temperature**：生成时温度为 0.2，减少随意发挥。
 
-AI 版有两道关，避免模型在没有依据时编答案：
-
-1. 检索最高分低于 0.55 时，不调用大模型，直接告诉访客没找到，并打开留言表单。
-2. 过了线才把那 3 条 FAQ 交给模型。系统提示要求只能根据这些资料回答；资料里没有电话、日期、金额、地点时，只能回复标记 `[NO_ANSWER]`，不能猜。接口看到这个标记，就改成「我没有在现有 FAQ 里找到这个问题的答案。」并转人工。
-3. 请求里 `temperature` 是 0.2，并关闭思考模式，避免模型忽略温度自己发挥。
-
-关键词版不调用模型，匹配不上就同样转人工。
+关键词版不调用模型，匹配不上同样转人工。
 
 ## 本地运行
 
@@ -55,38 +63,67 @@ npm install
 copy .env.example .env.local
 ```
 
-`.env.local` 里至少填 `ADMIN_PASSWORD`。其余先留空，就是零成本的关键词版。
+在 `.env.local` 里按需填写（密钥不要提交 git）：
+
+| 变量 | 作用 |
+|---|---|
+| `ANSWER_MODE` | `keyword` 或 `rag`。不写则关键词版 |
+| `STORE` | `json` 或 `supabase`。不写则本地 JSON |
+| `ADMIN_PASSWORD` | `/admin` 登录密码。本地至少要填这个 |
+| `DEEPSEEK_API_KEY` | AI 版生成回答。关键词版可留空 |
+| `DEEPSEEK_BASE_URL` | DeepSeek 接口地址，一般用示例里的默认值 |
+| `DASHSCOPE_API_KEY` | 阿里云百炼文本向量。AI 版和生成 FAQ 向量时需要 |
+| `SUPABASE_URL` | 线上留言库地址。本地 JSON 可留空 |
+| `SUPABASE_SERVICE_ROLE_KEY` | 仅服务端使用的密钥，不要用前端可发布的 key，也不要暴露到浏览器 |
 
 ```bash
 npm run dev
 ```
 
-用浏览器打开 http://localhost:3000 。不要用 `127.0.0.1`，Next 会拦截。右下角点开聊天气泡，可以问「宿舍几点熄灯」。问「校长手机号」应该转人工。留言在 http://localhost:3000/admin ，密码就是 `ADMIN_PASSWORD`。
+用浏览器打开 http://localhost:3000（不要用 `127.0.0.1`，Next 会拦截）。可问「宿舍几点熄灯」；问「校长手机号」应转人工。后台：http://localhost:3000/admin 。
 
-改成 AI 版时，在 `.env.local` 写入：
+改过 `widget/` 源码后重新打包嵌入脚本：
 
-```
-ANSWER_MODE=rag
-DEEPSEEK_API_KEY=你的密钥
-DASHSCOPE_API_KEY=你的阿里云百炼密钥
+```bash
+npm run build:widget
 ```
 
-改过 `data/faq.md` 后要重新生成向量：
+改过 `data/faq.md` 且使用 AI 版时，重新生成向量（需要已填写百炼密钥）：
 
 ```bash
 npm run build:embeddings
 ```
 
-改环境变量后要重启 `npm run dev`。
+改环境变量后要重启 `npm run dev`。本机路径里如果有 `&`，请保持现有 npm 脚本写法（`node ./node_modules/...`），不要改回 `.bin`。
 
-线上把留言存进 Supabase 时，再写 `STORE=supabase`、`SUPABASE_URL` 和 `SUPABASE_SERVICE_ROLE_KEY`。服务端密钥不要用 `sb_publishable_` 开头的那种，也不要暴露到前端。
+## 部署到 Vercel
 
-本机项目路径里如果有 `&`，npm 脚本必须保持 `node ./node_modules/...` 这种写法，不要改回 `.bin`。
+Vercel 无服务器函数没有可持久写入的本地磁盘。若 `STORE` 仍是 `json`（或不写），留言会丢或无法保存。
 
-## 嵌到别的网页
+上线时必须设置：
 
-```html
-<script src="https://faq-widget-naicongh-2112.vercel.app/widget.js" defer></script>
+- `STORE=supabase`
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`（服务端 JWT，不要用 `sb_publishable_` 开头的那种）
+- `ADMIN_PASSWORD`
+- 若演示 AI 版：`ANSWER_MODE=rag`，以及 `DEEPSEEK_API_KEY`、`DASHSCOPE_API_KEY`
+
+重新部署后，已提交到 Supabase 的留言应仍在。
+
+## 截图
+
+首页与右下角气泡：
+
+![演示首页，右下角是聊天气泡](doc/screenshots/home.png)
+
+展开后的聊天窗（待补）：把截图放到 `doc/screenshots/chat.png` 后，用下面这行替换本句。
+
+```markdown
+![展开后的聊天窗口](doc/screenshots/chat.png)
 ```
 
-小部件从这段脚本的地址推断接口在哪。宿主页面和演示站不是同一个域名时，公开的 POST 接口已经允许跨域。
+## 演示视频
+
+30 秒流程：FAQ 命中 → 换说法命中 → 未知问题转人工 → 后台看到留言。
+
+视频文件：仓库根目录 [`演示视频.mp4`](./演示视频.mp4)

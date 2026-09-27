@@ -44,7 +44,7 @@ faq-widget/
 │     │  ├─ types.ts       # LeadStore 接口
 │     │  ├─ json.ts        # 本地 JSON 实现
 │     │  └─ supabase.ts    # Supabase 实现
-│     ├─ rateLimit.ts      # 简单的内存频率限制
+│     ├─ rateLimit.ts      # 频率限制：有 Supabase 密钥走计数表，否则用内存
 │     └─ config.ts         # 读取并校验环境变量
 └─ .env.example
 ```
@@ -52,7 +52,7 @@ faq-widget/
 ## 3. 数据流
 ### 3.1 提问
 1. 访客在小部件里输入问题，小部件 `POST /api/chat`，内容 `{ question }`。
-2. 接口做长度校验和频率限制。
+2. 接口做长度校验和频率限制（`allowRequest`）。配了 Supabase 时通过 RPC `allow_request` 在数据库里计数，多台 Vercel 实例共享同一限额；没配时仍用进程内存。
 3. 根据 `ANSWER_MODE` 选择引擎：
    - `keyword`：计算问题与每条 FAQ 问题的相似度，取最高分；高于阈值返回答案，否则 `handoff: true`。
    - `rag`：调用向量接口得到问题向量 → 与 `faq-embeddings.json` 计算余弦相似度取前 3 条 → 最高分低于阈值直接 `handoff: true` → 否则把这 3 条作为资料发给 DeepSeek → 模型若回复约定标记 `[NO_ANSWER]` 则 `handoff: true`。
@@ -107,12 +107,12 @@ interface LeadStore {
 ## 7. 环境变量（`.env.example`）
 ```
 ANSWER_MODE=keyword            # keyword | rag
-STORE=json                     # json | supabase
+STORE=json                     # json | supabase；线上必须用 supabase
 ADMIN_PASSWORD=
 DEEPSEEK_API_KEY=
 DEEPSEEK_BASE_URL=https://api.deepseek.com
 DASHSCOPE_API_KEY=             # 阿里云百炼，用于文本向量
-SUPABASE_URL=
+SUPABASE_URL=                  # 留言和频率限制共用
 SUPABASE_SERVICE_ROLE_KEY=     # 仅服务端使用，绝不暴露到前端
 ```
 
@@ -126,4 +126,49 @@ create table leads (
   created_at timestamptz not null default now()
 );
 alter table leads enable row level security; -- 只通过服务端密钥访问
+
+-- 频率限制：多实例共用计数。在 SQL Editor 执行一次即可。
+create table if not exists rate_limits (
+  key text primary key,
+  count integer not null,
+  reset_at timestamptz not null
+);
+alter table rate_limits enable row level security;
+
+create or replace function allow_request(p_key text, p_limit integer, p_window_ms integer)
+returns boolean
+language plpgsql
+as $$
+declare
+  rec rate_limits;
+  win interval := make_interval(secs => p_window_ms::double precision / 1000.0);
+begin
+  loop
+    select * into rec from rate_limits where key = p_key for update;
+    if not found then
+      begin
+        insert into rate_limits (key, count, reset_at)
+        values (p_key, 1, clock_timestamp() + win);
+        return true;
+      exception when unique_violation then
+        continue;
+      end;
+    end if;
+    if rec.reset_at <= clock_timestamp() then
+      update rate_limits
+      set count = 1, reset_at = clock_timestamp() + win
+      where key = p_key;
+      return true;
+    end if;
+    if rec.count >= p_limit then
+      return false;
+    end if;
+    update rate_limits set count = rec.count + 1 where key = p_key;
+    return true;
+  end loop;
+end;
+$$;
+
+revoke all on function allow_request(text, integer, integer) from public;
+grant execute on function allow_request(text, integer, integer) to service_role;
 ```

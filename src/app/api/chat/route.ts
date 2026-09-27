@@ -27,7 +27,7 @@ export function OPTIONS() {
 }
 
 export async function POST(request: Request) {
-  if (!allowRequest(`chat:${clientAddress(request)}`, CHAT_LIMIT, WINDOW_MS)) {
+  if (!(await allowRequest(`chat:${clientAddress(request)}`, CHAT_LIMIT, WINDOW_MS))) {
     return json({ error: "请求太频繁，请稍后再试" }, 429);
   }
 
@@ -55,6 +55,17 @@ export async function POST(request: Request) {
     return json({ error: `问题不能超过 ${MAX_QUESTION_LENGTH} 个字` }, 400);
   }
 
-  const result: ChatResponse = await engine.answer(trimmed);
+  let result: ChatResponse;
+  try {
+    result = await engine.answer(trimmed);
+  } catch (error) {
+    // 模型或向量接口挂了时，仍返回转人工，让小部件弹出留言表单。
+    console.error("提问接口出错：", error);
+    result = {
+      answer: "系统暂时忙，请留下邮箱，我们会回复你。",
+      handoff: true,
+      sources: [],
+    };
+  }
   return json(result);
 }

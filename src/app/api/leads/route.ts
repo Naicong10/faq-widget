@@ -29,7 +29,7 @@ export function OPTIONS() {
 }
 
 export async function POST(request: Request) {
-  if (!allowRequest(`leads:${clientAddress(request)}`, LEAD_LIMIT, WINDOW_MS)) {
+  if (!(await allowRequest(`leads:${clientAddress(request)}`, LEAD_LIMIT, WINDOW_MS))) {
     return json({ error: "请求太频繁，请稍后再试" }, 429);
   }
 
@@ -61,15 +61,26 @@ export async function POST(request: Request) {
     botAnswer = answer;
   }
 
-  const lead = await store.add({ email, question, ...(botAnswer ? { botAnswer } : {}) });
-  return json(lead, 201);
+  try {
+    const lead = await store.add({ email, question, ...(botAnswer ? { botAnswer } : {}) });
+    return json(lead, 201);
+  } catch (error) {
+    // 磁盘写不进或数据库挂了时，不要把内部报错丢给访客。
+    console.error("留言保存失败：", error);
+    return json({ error: "留言保存失败，请稍后再试" }, 500);
+  }
 }
 
 export async function GET(request: Request) {
   if (!isAdmin(request)) {
     return NextResponse.json({ error: "未登录" }, { status: 401 });
   }
-  return NextResponse.json(await store.list());
+  try {
+    return NextResponse.json(await store.list());
+  } catch (error) {
+    console.error("留言列表读取失败：", error);
+    return NextResponse.json({ error: "留言保存失败，请稍后再试" }, { status: 500 });
+  }
 }
 
 function readText(value: unknown, field: string, maxLength: number): string | NextResponse {

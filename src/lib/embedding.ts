@@ -20,6 +20,8 @@ export async function embedTexts(apiKey: string, texts: string[]): Promise<numbe
       Authorization: `Bearer ${apiKey}`,
       "Content-Type": "application/json",
     },
+    // 向量接口卡住时同样超时，错误交给提问接口统一转人工。
+    signal: AbortSignal.timeout(10_000),
     body: JSON.stringify({
       model: EMBEDDING_MODEL,
       input: texts,
