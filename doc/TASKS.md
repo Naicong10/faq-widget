@@ -4,16 +4,15 @@
 
 ## 交接说明
 
-- 当前：T0–T4.1 已完成。密钥已在 `.env.local`（`DEEPSEEK_API_KEY`、`DEEPSEEK_BASE_URL=https://api.deepseek.com`、`DASHSCOPE_API_KEY`），不要提交、不要代填。下一步做 T4.2：编写 `scripts/build-embeddings.ts`，生成 `data/faq-embeddings.json`。百炼密钥按华北2（北京）申请。
+- 当前：T0–T4.2 已完成。下一步做 T4.3：实现 `rag.ts`。向量文件 `data/faq-embeddings.json`：模型 `text-embedding-v4`，1024 维，每条是 `id` + `embedding`。文本是「问题\n答案」。接口 `https://dashscope.aliyuncs.com/compatible-mode/v1/embeddings`（北京旧域名，不用业务空间 ID），一次最多 10 条。改了 `faq.md` 要重新跑 `npm run build:embeddings`。
 - 关键词：`src/lib/answer/keyword.ts` 用汉字二元组 Dice。命中阈值 0.3，建议阈值 0.18，最多 3 条。停用字在 `STOP_CHARS`，避免「怎么、什么」把无关问题配上。
 - 频率限制：`src/lib/rateLimit.ts` 内存计数。提问每地址每分钟 20 次，留言 5 次，超出返回 429。只限制 POST；GET 留言和 OPTIONS 不限。重启进程后清空。`x-forwarded-for` 可伪造，只防普通连刷。
 - 管理登录：cookie 名 `admin_session`，值是 `ADMIN_PASSWORD` 的 sha256，不存明文。httpOnly、SameSite=Lax，只在生产环境加 `secure`。密码只在 `.env.local`。
 - 小部件：首页用原生 `<script src="/widget.js" defer>`。`next/script` 只会预加载、不执行。接口地址从脚本 `src` 推断。CORS 只加在公开的 POST 上。
 - 本地：用 http://localhost:3000，不要用 127.0.0.1（Next 会拦截）。项目路径含 `&`，npm 脚本必须写成 `node ./node_modules/...`，不要改回 `.bin`。
-- 不要提交 `.env.local` 和 `data/leads.json`。代码目前仍只读 `ADMIN_PASSWORD`，T4.2 起才会读取百炼密钥。官方文档里的对话模型名现为 `deepseek-flash` / `deepseek-v4-pro`；架构里写的 `deepseek-chat` 留到 T4.3 再确认，不要提前改架构。
+- 不要提交 `.env.local` 和 `data/leads.json`。页面和接口仍只读 `ADMIN_PASSWORD`；只有 `scripts/build-embeddings.ts` 读取 `DASHSCOPE_API_KEY`。官方文档里的对话模型名现为 `deepseek-flash` / `deepseek-v4-pro`；架构里写的 `deepseek-chat` 留到 T4.3 再确认，不要提前改架构。
 
 ## 阶段 4：AI 版（RAG）
-- [ ] T4.2 编写 `scripts/build-embeddings.ts`，生成 `data/faq-embeddings.json`。
 - [ ] T4.3 实现 `rag.ts`：问题向量化 → 余弦相似度取前 3 → 低于阈值直接转人工 → 调 DeepSeek（防编造提示词、`[NO_ANSWER]` 标记）。
 - [ ] T4.4 用 `ANSWER_MODE` 切换两种引擎；准备 10 个测试问题，对比关键词版和 AI 版的结果，记录到 `doc/COMPARE.md`。
 

@@ -26,3 +26,4 @@
 
 ## 阶段 4：AI 版（RAG）
 - [x] T4.1 注册 DeepSeek 和阿里云百炼，拿到密钥，写进 `.env.local`（我自己操作，AI 只提示步骤）。（完成于 2026-09-27）
+- [x] T4.2 编写 `scripts/build-embeddings.ts`，生成 `data/faq-embeddings.json`。（完成于 2026-09-27）
