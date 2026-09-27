@@ -2,6 +2,16 @@
 
 > 规则：一次只做一项；完成后移到 `DONE.md`。每个阶段结束都应该能演示。
 
+## 交接说明
+
+- 当前：T0–T3.5 已完成并提交。下一步做 T4.1：用户自己注册 DeepSeek 和阿里云百炼，密钥写入 `.env.local`；AI 只提示步骤，不要代填密钥。
+- 关键词：`src/lib/answer/keyword.ts` 用汉字二元组 Dice。命中阈值 0.3，建议阈值 0.18，最多 3 条。停用字在 `STOP_CHARS`，避免「怎么、什么」把无关问题配上。
+- 频率限制：`src/lib/rateLimit.ts` 内存计数。提问每地址每分钟 20 次，留言 5 次，超出返回 429。只限制 POST；GET 留言和 OPTIONS 不限。重启进程后清空。`x-forwarded-for` 可伪造，只防普通连刷。
+- 管理登录：cookie 名 `admin_session`，值是 `ADMIN_PASSWORD` 的 sha256，不存明文。httpOnly、SameSite=Lax，只在生产环境加 `secure`。密码只在 `.env.local`。
+- 小部件：首页用原生 `<script src="/widget.js" defer>`。`next/script` 只会预加载、不执行。接口地址从脚本 `src` 推断。CORS 只加在公开的 POST 上。
+- 本地：用 http://localhost:3000，不要用 127.0.0.1（Next 会拦截）。项目路径含 `&`，npm 脚本必须写成 `node ./node_modules/...`，不要改回 `.bin`。
+- 不要提交 `.env.local` 和 `data/leads.json`。代码目前只读 `ADMIN_PASSWORD`；`.env.example` 已包含它，其余密钥留给 T4/T5，代码尚未读取。
+
 ## 阶段 4：AI 版（RAG）
 - [ ] T4.1 注册 DeepSeek 和阿里云百炼，拿到密钥，写进 `.env.local`（我自己操作，AI 只提示步骤）。
 - [ ] T4.2 编写 `scripts/build-embeddings.ts`，生成 `data/faq-embeddings.json`。
