@@ -4,7 +4,8 @@
 
 ## 交接说明
 
-- 当前：T0–T5.1 已完成。下一步做 T5.2：推送到 GitHub，部署到 Vercel，配置环境变量，线上验证全部验收标准。
+- 当前：T0–T5.2 已完成。下一步做 T5.3：写 README（项目介绍、架构图、防编造做法、本地运行、截图）。
+- 线上：仓库 https://github.com/Naicong10/faq-widget ，分支 `master`。Vercel 项目 `faq-widget`，正式地址 https://faq-widget-naicongh-2112.vercel.app 。线上 `ANSWER_MODE=rag`、`STORE=supabase`。GitHub 还没连上 Vercel，推送不会自动部署。
 - 关键词：`src/lib/answer/keyword.ts` 用汉字二元组 Dice。命中阈值 0.3，建议阈值 0.18，最多 3 条。停用字在 `STOP_CHARS`，避免「怎么、什么」把无关问题配上。
 - 频率限制：`src/lib/rateLimit.ts` 内存计数。提问每地址每分钟 20 次，留言 5 次，超出返回 429。只限制 POST；GET 留言和 OPTIONS 不限。重启进程后清空。`x-forwarded-for` 可伪造，只防普通连刷。
 - 管理登录：cookie 名 `admin_session`，值是 `ADMIN_PASSWORD` 的 sha256，不存明文。httpOnly、SameSite=Lax，只在生产环境加 `secure`。密码只在 `.env.local`。
@@ -14,6 +15,5 @@
 - 不要提交 `.env.local` 和 `data/leads.json`。本地 `STORE=supabase`，密钥是服务端 JWT，不是 `sb_publishable_`。`src/lib/store/supabase.ts` 用 REST，没有装 supabase 包。表 `leads` 已开行级安全。不写 `STORE` 时仍用本地 JSON。提问接口读 `ANSWER_MODE`，不写时是 `keyword`。
 
 ## 阶段 5：上线
-- [ ] T5.2 推送到 GitHub，部署到 Vercel，配置环境变量，线上验证全部验收标准。
 - [ ] T5.3 写 README（项目介绍、架构图、防编造做法、本地运行、截图）。
 - [ ] T5.4 录 30 秒演示视频：FAQ 命中 → 换说法命中 → 未知问题转人工 → 后台看到留言。
