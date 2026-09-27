@@ -28,3 +28,4 @@
 - [x] T4.1 注册 DeepSeek 和阿里云百炼，拿到密钥，写进 `.env.local`（我自己操作，AI 只提示步骤）。（完成于 2026-09-27）
 - [x] T4.2 编写 `scripts/build-embeddings.ts`，生成 `data/faq-embeddings.json`。（完成于 2026-09-27）
 - [x] T4.3 实现 `rag.ts`：问题向量化 → 余弦相似度取前 3 → 低于阈值直接转人工 → 调 DeepSeek（防编造提示词、`[NO_ANSWER]` 标记）。（完成于 2026-09-27）
+- [x] T4.4 用 `ANSWER_MODE` 切换两种引擎；准备 10 个测试问题，对比关键词版和 AI 版的结果，记录到 `doc/COMPARE.md`。（完成于 2026-09-27）

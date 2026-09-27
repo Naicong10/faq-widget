@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { createKeywordEngine } from "@/lib/answer/keyword";
+import { createAnswerEngine } from "@/lib/answer/createEngine";
 import type { ChatResponse } from "@/lib/answer/types";
-import { loadFaq } from "@/lib/faq";
 import { allowRequest, clientAddress } from "@/lib/rateLimit";
 
 // 常见问题都很短。超长文本多半是误粘贴，接上模型后也会白白消耗额度。
@@ -10,7 +9,7 @@ const MAX_QUESTION_LENGTH = 200;
 const CHAT_LIMIT = 20;
 const WINDOW_MS = 60_000;
 
-const engine = createKeywordEngine(loadFaq());
+const engine = createAnswerEngine();
 
 // 小部件会嵌在别的网站上，浏览器默认禁止跨域读接口。允许任意来源调用这个公开接口。
 const CORS_HEADERS = {
