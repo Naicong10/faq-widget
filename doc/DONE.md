@@ -29,3 +29,6 @@
 - [x] T4.2 编写 `scripts/build-embeddings.ts`，生成 `data/faq-embeddings.json`。（完成于 2026-09-27）
 - [x] T4.3 实现 `rag.ts`：问题向量化 → 余弦相似度取前 3 → 低于阈值直接转人工 → 调 DeepSeek（防编造提示词、`[NO_ANSWER]` 标记）。（完成于 2026-09-27）
 - [x] T4.4 用 `ANSWER_MODE` 切换两种引擎；准备 10 个测试问题，对比关键词版和 AI 版的结果，记录到 `doc/COMPARE.md`。（完成于 2026-09-27）
+
+## 阶段 5：上线
+- [x] T5.1 创建 Supabase 项目和 `leads` 表，实现 `supabase.ts`，用 `STORE` 切换。（完成于 2026-09-27）

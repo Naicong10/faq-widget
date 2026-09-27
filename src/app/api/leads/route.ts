@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/adminAuth";
 import { allowRequest, clientAddress } from "@/lib/rateLimit";
-import { createJsonLeadStore } from "@/lib/store/json";
+import { createLeadStore } from "@/lib/store/createStore";
 
 const MAX_EMAIL_LENGTH = 254;
 const MAX_QUESTION_LENGTH = 200;
@@ -11,7 +11,7 @@ const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const LEAD_LIMIT = 5;
 const WINDOW_MS = 60_000;
 
-const store = createJsonLeadStore();
+const store = createLeadStore();
 
 // 和提问接口一样，小部件会从别的网站提交留言。
 const CORS_HEADERS = {
