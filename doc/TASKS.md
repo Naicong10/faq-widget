@@ -2,9 +2,6 @@
 
 > 规则：一次只做一项；完成后移到 `DONE.md`。每个阶段结束都应该能演示。
 
-## 阶段 3：转人工与留言
-- [ ] T3.5 给 `/api/chat` 和 `/api/leads` 加简单频率限制。
-
 ## 阶段 4：AI 版（RAG）
 - [ ] T4.1 注册 DeepSeek 和阿里云百炼，拿到密钥，写进 `.env.local`（我自己操作，AI 只提示步骤）。
 - [ ] T4.2 编写 `scripts/build-embeddings.ts`，生成 `data/faq-embeddings.json`。

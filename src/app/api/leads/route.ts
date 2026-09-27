@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { isAdmin } from "@/lib/adminAuth";
+import { allowRequest, clientAddress } from "@/lib/rateLimit";
 import { createJsonLeadStore } from "@/lib/store/json";
 
 const MAX_EMAIL_LENGTH = 254;
 const MAX_QUESTION_LENGTH = 200;
 const MAX_BOT_ANSWER_LENGTH = 2000;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// 留言是人手填的，一分钟提交几次已经很多。再多就当成刷留言。
+const LEAD_LIMIT = 5;
+const WINDOW_MS = 60_000;
 
 const store = createJsonLeadStore();
 
@@ -25,6 +29,10 @@ export function OPTIONS() {
 }
 
 export async function POST(request: Request) {
+  if (!allowRequest(`leads:${clientAddress(request)}`, LEAD_LIMIT, WINDOW_MS)) {
+    return json({ error: "请求太频繁，请稍后再试" }, 429);
+  }
+
   let body: unknown;
   try {
     body = await request.json();

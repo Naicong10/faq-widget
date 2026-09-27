@@ -2,9 +2,13 @@ import { NextResponse } from "next/server";
 import { createKeywordEngine } from "@/lib/answer/keyword";
 import type { ChatResponse } from "@/lib/answer/types";
 import { loadFaq } from "@/lib/faq";
+import { allowRequest, clientAddress } from "@/lib/rateLimit";
 
 // 常见问题都很短。超长文本多半是误粘贴，接上模型后也会白白消耗额度。
 const MAX_QUESTION_LENGTH = 200;
+// 正常访客一分钟问不了这么多。挡住脚本连刷，避免以后接上模型时把额度打光。
+const CHAT_LIMIT = 20;
+const WINDOW_MS = 60_000;
 
 const engine = createKeywordEngine(loadFaq());
 
@@ -24,6 +28,10 @@ export function OPTIONS() {
 }
 
 export async function POST(request: Request) {
+  if (!allowRequest(`chat:${clientAddress(request)}`, CHAT_LIMIT, WINDOW_MS)) {
+    return json({ error: "请求太频繁，请稍后再试" }, 429);
+  }
+
   let body: unknown;
   try {
     body = await request.json();
