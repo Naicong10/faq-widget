@@ -8,7 +8,7 @@
 | 嵌入小部件 | 原生 JavaScript（TypeScript 编译为单文件） | 不依赖 React，能嵌入任意网站 |
 | 关键词检索 | 自己实现的字符 n-gram 相似度（中文按字/二元组） | 零依赖，便于理解 |
 | 向量接口 | 阿里云百炼 文本向量（text-embedding 系列） | OpenAI 兼容接口 |
-| 大模型 | DeepSeek（`deepseek-chat`） | OpenAI 兼容接口，用 `openai` npm 包调用 |
+| 大模型 | DeepSeek（`deepseek-flash`） | OpenAI 兼容接口，用 `fetch` 调用，没有安装 `openai` 包 |
 | 存储 | 本地 JSON 文件 / Supabase（Postgres） | 由环境变量切换 |
 | 部署 | Vercel | |
 
@@ -44,8 +44,7 @@ faq-widget/
 │     │  ├─ types.ts       # LeadStore 接口
 │     │  ├─ json.ts        # 本地 JSON 实现
 │     │  └─ supabase.ts    # Supabase 实现
-│     ├─ rateLimit.ts      # 频率限制：有 Supabase 密钥走计数表，否则用内存
-│     └─ config.ts         # 读取并校验环境变量
+│     └─ rateLimit.ts      # 频率限制：有 Supabase 密钥走计数表，否则用内存
 └─ .env.example
 ```
 
