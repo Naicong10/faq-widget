@@ -64,14 +64,27 @@ export default function AdminPage() {
     await load();
   }
 
+  async function onLogout() {
+    setError("");
+    await fetch("/api/admin/logout", { method: "POST" });
+    setLeads(null);
+  }
+
   return (
     <div className="min-h-full bg-[#f3efe6] text-[#1c2833]">
       <header className="border-b border-[#1d4e89]/20">
         <div className="mx-auto flex max-w-5xl items-baseline justify-between px-6 py-5">
           <p className="text-lg font-semibold">星河大学 · 留言</p>
-          <Link className="text-sm text-[#1d4e89]" href="/">
-            返回首页
-          </Link>
+          <div className="flex items-baseline gap-4">
+            {leads ? (
+              <button type="button" className="text-sm text-[#1d4e89]" onClick={onLogout}>
+                退出
+              </button>
+            ) : null}
+            <Link className="text-sm text-[#1d4e89]" href="/">
+              返回首页
+            </Link>
+          </div>
         </div>
       </header>
       <main className="mx-auto max-w-5xl px-6 py-10">

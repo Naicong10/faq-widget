@@ -1,7 +1,20 @@
 import { NextResponse } from "next/server";
-import { ADMIN_COOKIE, adminToken } from "@/lib/adminAuth";
+import {
+  ADMIN_COOKIE,
+  ADMIN_SESSION_MAX_AGE,
+  adminToken,
+  passwordsMatch,
+} from "@/lib/adminAuth";
+import { allowRequest, clientAddress } from "@/lib/rateLimit";
+
+const LOGIN_LIMIT = 5;
+const LOGIN_WINDOW_MS = 15 * 60_000;
 
 export async function POST(request: Request) {
+  if (!(await allowRequest(`admin-login:${clientAddress(request)}`, LOGIN_LIMIT, LOGIN_WINDOW_MS))) {
+    return NextResponse.json({ error: "请求太频繁，请稍后再试" }, { status: 429 });
+  }
+
   let body: unknown;
   try {
     body = await request.json();
@@ -15,7 +28,7 @@ export async function POST(request: Request) {
       : undefined;
   const expected = process.env.ADMIN_PASSWORD;
   const token = adminToken();
-  if (!expected || !token || typeof password !== "string" || password !== expected) {
+  if (!expected || !token || typeof password !== "string" || !passwordsMatch(password, expected)) {
     return NextResponse.json({ error: "密码错误" }, { status: 401 });
   }
 
@@ -27,6 +40,7 @@ export async function POST(request: Request) {
     httpOnly: true,
     sameSite: "lax",
     path: "/",
+    maxAge: ADMIN_SESSION_MAX_AGE,
     secure: process.env.NODE_ENV === "production",
   });
   return response;
